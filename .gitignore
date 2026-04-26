@@ -1,0 +1,34 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files (secrets) — keep `.env.example` in git as a template
+.env
+.env.*
+.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Django / local DB
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
