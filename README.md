@@ -50,6 +50,7 @@ Main variables:
 - `POSTGRES_HOST`
 - `POSTGRES_PORT`
 - `WHATSAPP_PROVIDER`
+- `FIREBASE_CREDENTIALS_PATH`
 
 ## 3) Render deployment
 
@@ -68,6 +69,7 @@ Use internal Render Postgres host for `POSTGRES_HOST` when web service and DB ar
 ## 4) Useful API routes
 - `POST /api/auth/send-otp/`
 - `POST /api/auth/verify-otp/`
+- `POST /api/auth/verify-firebase-otp/`
 - `GET/PATCH /api/auth/me/`
 - `GET /api/bookings/dashboard/`
 - `GET /api/bookings/slots/?date=YYYY-MM-DD`

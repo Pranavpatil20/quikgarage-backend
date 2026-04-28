@@ -22,6 +22,27 @@ Request:
   "full_name": "Rahul Patil"
 }
 ```
+
+### POST `/api/auth/verify-firebase-otp/`
+Request:
+```json
+{
+  "firebase_id_token": "firebase_jwt_id_token",
+  "role": "owner",
+  "full_name": "Rahul Patil"
+}
+```
+Response:
+```json
+{
+  "user_id": 1,
+  "full_name": "Rahul Patil",
+  "phone_number": "+919876543210",
+  "role": "owner",
+  "refresh": "jwt_refresh",
+  "access": "jwt_access"
+}
+```
 Response:
 ```json
 {
