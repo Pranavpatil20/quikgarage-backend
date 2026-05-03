@@ -1,11 +1,6 @@
 from rest_framework import generics, permissions, response
 
-from .serializers import (
-    SendOtpSerializer,
-    UserProfileSerializer,
-    VerifyFirebaseOtpSerializer,
-    VerifyOtpSerializer,
-)
+from .serializers import SendOtpSerializer, UserProfileSerializer, VerifyOtpSerializer
 
 
 class SendOtpAPIView(generics.CreateAPIView):
@@ -41,13 +36,3 @@ class MeAPIView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
-
-
-class VerifyFirebaseOtpAPIView(generics.CreateAPIView):
-    permission_classes = [permissions.AllowAny]
-    serializer_class = VerifyFirebaseOtpSerializer
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return response.Response(serializer.save())
