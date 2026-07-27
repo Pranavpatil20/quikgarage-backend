@@ -36,5 +36,7 @@ services:
         value: "True"
       - key: CELERY_TASK_ALWAYS_EAGER
         value: "true"
+      - key: ENABLE_DEV_AUTH
+        value: "true"
       - key: PYTHON_VERSION
         value: "3.12.3"

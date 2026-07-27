@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework import permissions, status
@@ -61,14 +63,15 @@ class FirebaseLoginView(APIView):
 
 
 class DevLoginView(APIView):
-    """DEBUG-only: sign in with phone number without Firebase (local development)."""
+    """Phone login without Firebase (local / staging when ENABLE_DEV_AUTH=true)."""
 
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        if not settings.DEBUG:
+        allow_dev = settings.DEBUG or os.getenv('ENABLE_DEV_AUTH', 'false').lower() == 'true'
+        if not allow_dev:
             return Response(
-                {'detail': 'Dev login is disabled in production.'},
+                {'detail': 'Dev login is disabled. Set ENABLE_DEV_AUTH=true or use Firebase OTP.'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
