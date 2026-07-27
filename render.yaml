@@ -15,7 +15,7 @@ services:
     name: quikgarage-api
     runtime: python
     plan: free
-    rootDir: backend
+    # Repo root IS the Django project (no nested backend/ folder on GitHub)
     buildCommand: chmod +x build.sh && ./build.sh
     startCommand: chmod +x start.sh && ./start.sh
     healthCheckPath: /health/
