@@ -1,0 +1,40 @@
+# QuikGarage — Render Blueprint
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: Connect this GitHub repo in Render → New → Blueprint → select this file.
+# Or create services manually using the steps in README.md / docs/RENDER_DEPLOY.md
+
+databases:
+  - name: quikgarage-db
+    plan: free
+    databaseName: quikgarage
+    user: quikgarage
+
+services:
+  - type: web
+    name: quikgarage-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: chmod +x start.sh && ./start.sh
+    healthCheckPath: /health/
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: USE_SQLITE
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quikgarage-db
+          property: connectionString
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: CORS_ALLOW_ALL_ORIGINS
+        value: "True"
+      - key: CELERY_TASK_ALWAYS_EAGER
+        value: "true"
+      - key: PYTHON_VERSION
+        value: "3.12.3"
