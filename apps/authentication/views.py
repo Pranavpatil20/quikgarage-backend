@@ -1,4 +1,5 @@
 import os
+from datetime import time
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -7,9 +8,17 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.garages.models import Garage
+from apps.users.models import UserRole
 from apps.users.serializers import UserSerializer
 
-from .serializers import FirebaseAuthSerializer, PhoneAuthSerializer
+from .serializers import (
+    FirebaseAuthSerializer,
+    PasswordLoginSerializer,
+    PhoneAuthSerializer,
+    RegisterSerializer,
+    normalize_phone,
+)
 
 User = get_user_model()
 
@@ -32,7 +41,7 @@ class FirebaseLoginView(APIView):
         data = serializer.validated_data
 
         user, created = User.objects.get_or_create(
-            phone=data['phone'],
+            phone=normalize_phone(data['phone']),
             defaults={
                 'name': data.get('name', ''),
                 'role': data.get('role', 'customer'),
@@ -78,10 +87,7 @@ class DevLoginView(APIView):
         serializer = PhoneAuthSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-
-        phone = data['phone'].strip().replace(' ', '')
-        if not phone.startswith('+'):
-            phone = f'+91{phone.lstrip("0")}'
+        phone = normalize_phone(data['phone'])
 
         user, created = User.objects.get_or_create(
             phone=phone,
@@ -105,6 +111,81 @@ class DevLoginView(APIView):
         return Response({
             **_issue_tokens(user),
             'is_new_user': created,
+        })
+
+
+class RegisterView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        phone = normalize_phone(data['phone'])
+
+        if User.objects.filter(phone=phone).exists():
+            return Response(
+                {'detail': 'An account with this phone number already exists. Please sign in.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.create_user(
+            phone=phone,
+            name=data['name'].strip(),
+            role=data['role'],
+            password=data['password'],
+            firebase_uid=f'pwd_{phone}',
+        )
+
+        if data['role'] == UserRole.OWNER:
+            Garage.objects.create(
+                owner=user,
+                garage_name=data['garage_name'].strip(),
+                address='Address not set yet',
+                opening_time=time(9, 0),
+                closing_time=time(18, 0),
+            )
+
+        return Response({
+            **_issue_tokens(user),
+            'is_new_user': True,
+        }, status=status.HTTP_201_CREATED)
+
+
+class PasswordLoginView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = PasswordLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        phone = normalize_phone(data['phone'])
+        role = data['role']
+
+        try:
+            user = User.objects.get(phone=phone)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': 'No account found with this phone number. Please sign up first.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not user.has_usable_password() or not user.check_password(data['password']):
+            return Response(
+                {'detail': 'Incorrect phone number or password.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if user.role != role:
+            if user.role == UserRole.OWNER:
+                message = 'You are not a customer. Please sign in as Owner.'
+            else:
+                message = 'You are not an owner. Please sign in as Customer.'
+            return Response({'detail': message}, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({
+            **_issue_tokens(user),
+            'is_new_user': False,
         })
 
 
