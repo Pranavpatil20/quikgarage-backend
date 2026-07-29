@@ -20,10 +20,11 @@ class BookingFilter(filters.FilterSet):
     booking_date = filters.DateFilter()
     booking_date_gte = filters.DateFilter(field_name='booking_date', lookup_expr='gte')
     booking_date_lte = filters.DateFilter(field_name='booking_date', lookup_expr='lte')
+    customer = filters.NumberFilter(field_name='customer_id')
 
     class Meta:
         model = Booking
-        fields = ['status', 'booking_date', 'garage']
+        fields = ['status', 'booking_date', 'garage', 'customer']
 
 
 class CustomerBookingListCreateView(generics.ListCreateAPIView):

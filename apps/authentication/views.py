@@ -160,7 +160,6 @@ class PasswordLoginView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         phone = normalize_phone(data['phone'])
-        role = data['role']
 
         try:
             user = User.objects.get(phone=phone)
@@ -176,11 +175,13 @@ class PasswordLoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if user.role != role:
+        # Optional role hint — only reject if client still sends a mismatched role.
+        requested_role = data.get('role')
+        if requested_role and user.role != requested_role:
             if user.role == UserRole.OWNER:
-                message = 'You are not a customer. Please sign in as Owner.'
+                message = 'You are not a customer. Please sign in with your owner account.'
             else:
-                message = 'You are not an owner. Please sign in as Customer.'
+                message = 'You are not an owner. Please sign in with your customer account.'
             return Response({'detail': message}, status=status.HTTP_403_FORBIDDEN)
 
         return Response({

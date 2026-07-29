@@ -49,33 +49,6 @@ class BookingSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class BookingStatusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Booking
-        fields = ('status',)
-
-    def validate_status(self, value):
-        instance = self.instance
-        allowed = {
-            BookingStatus.PENDING: {
-                BookingStatus.CONFIRMED, BookingStatus.CANCELLED,
-            },
-            BookingStatus.CONFIRMED: {
-                BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED,
-            },
-            BookingStatus.IN_PROGRESS: {
-                BookingStatus.COMPLETED, BookingStatus.CANCELLED,
-            },
-            BookingStatus.COMPLETED: set(),
-            BookingStatus.CANCELLED: set(),
-        }
-        if value not in allowed.get(instance.status, set()):
-            raise serializers.ValidationError(
-                f'Cannot transition from {instance.status} to {value}.',
-            )
-        return value
-
-
 class OwnerBookingCreateSerializer(serializers.ModelSerializer):
     customer_phone = serializers.CharField(write_only=True)
     vehicle_number = serializers.CharField(write_only=True)
@@ -119,3 +92,36 @@ class OwnerBookingCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         return Booking.objects.create(**validated_data)
+
+    def to_representation(self, instance):
+        return BookingSerializer(instance, context=self.context).data
+
+
+class BookingStatusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ('status',)
+
+    def validate_status(self, value):
+        instance = self.instance
+        allowed = {
+            BookingStatus.PENDING: {
+                BookingStatus.CONFIRMED, BookingStatus.CANCELLED,
+            },
+            BookingStatus.CONFIRMED: {
+                BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED,
+            },
+            BookingStatus.IN_PROGRESS: {
+                BookingStatus.COMPLETED, BookingStatus.CANCELLED,
+            },
+            BookingStatus.COMPLETED: set(),
+            BookingStatus.CANCELLED: set(),
+        }
+        if value not in allowed.get(instance.status, set()):
+            raise serializers.ValidationError(
+                f'Cannot transition from {instance.status} to {value}.',
+            )
+        return value
+
+    def to_representation(self, instance):
+        return BookingSerializer(instance, context=self.context).data

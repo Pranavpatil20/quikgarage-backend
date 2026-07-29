@@ -35,7 +35,7 @@ class PhoneAuthSerializer(serializers.Serializer):
 class PasswordLoginSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True)
-    role = serializers.ChoiceField(choices=UserRole.choices)
+    role = serializers.ChoiceField(choices=UserRole.choices, required=False)
 
 
 class RegisterSerializer(serializers.Serializer):
