@@ -104,15 +104,24 @@ class BookingStatusUpdateSerializer(serializers.ModelSerializer):
 
     def validate_status(self, value):
         instance = self.instance
+        # Owners can move forward through the flow without dead-ends.
+        # Confirmed → Completed is allowed so "Mark Completed" works without
+        # requiring an In Progress step first.
         allowed = {
             BookingStatus.PENDING: {
-                BookingStatus.CONFIRMED, BookingStatus.CANCELLED,
+                BookingStatus.CONFIRMED,
+                BookingStatus.IN_PROGRESS,
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
             },
             BookingStatus.CONFIRMED: {
-                BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED,
+                BookingStatus.IN_PROGRESS,
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
             },
             BookingStatus.IN_PROGRESS: {
-                BookingStatus.COMPLETED, BookingStatus.CANCELLED,
+                BookingStatus.COMPLETED,
+                BookingStatus.CANCELLED,
             },
             BookingStatus.COMPLETED: set(),
             BookingStatus.CANCELLED: set(),
