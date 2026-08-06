@@ -5,8 +5,9 @@ from django.dispatch import receiver
 
 from .models import Booking, BookingStatus
 
+# Fallback costs when garage has no default_service_cost set.
 DEFAULT_SERVICE_COSTS = {
-    'general_service': Decimal('1499.00'),
+    'general_service': Decimal('899.00'),
     'oil_change': Decimal('799.00'),
     'ac_service': Decimal('1299.00'),
     'brake_service': Decimal('999.00'),
@@ -15,6 +16,14 @@ DEFAULT_SERVICE_COSTS = {
     'inspection': Decimal('499.00'),
     'other': Decimal('999.00'),
 }
+
+
+def resolve_service_cost(booking) -> Decimal:
+    """Prefer garage default General Service amount for invoice calculation."""
+    garage = getattr(booking, 'garage', None)
+    if garage is not None and getattr(garage, 'default_service_cost', None) is not None:
+        return Decimal(garage.default_service_cost)
+    return DEFAULT_SERVICE_COSTS.get(booking.service_type, Decimal('899.00'))
 
 
 @receiver(pre_save, sender=Booking)
@@ -38,7 +47,6 @@ def notify_status_change(sender, instance, created, **kwargs):
         from apps.notifications.tasks import send_booking_status_notification
         send_booking_status_notification.delay(instance.pk, instance.status)
     except Exception:
-        # Celery/broker may be unavailable in free deployments.
         pass
 
 
@@ -58,10 +66,14 @@ def create_invoice_on_completed(sender, instance, created, **kwargs):
     if Invoice.objects.filter(booking=instance).exists():
         return
 
-    service_cost = DEFAULT_SERVICE_COSTS.get(
-        instance.service_type,
-        Decimal('999.00'),
-    )
+    # Ensure garage is loaded for default cost.
+    if instance.garage_id and not hasattr(instance, '_garage_prefetched'):
+        try:
+            instance.garage  # noqa: B018 — touch FK
+        except Exception:
+            pass
+
+    service_cost = resolve_service_cost(instance)
     Invoice.objects.create(
         booking=instance,
         service_cost=service_cost,

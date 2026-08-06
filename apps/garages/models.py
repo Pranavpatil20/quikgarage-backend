@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -12,6 +14,12 @@ class Garage(models.Model):
     address = models.TextField()
     opening_time = models.TimeField()
     closing_time = models.TimeField()
+    default_service_cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('899.00'),
+        help_text='Default General Service amount used when creating invoices.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

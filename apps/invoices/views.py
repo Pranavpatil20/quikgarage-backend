@@ -4,7 +4,7 @@ from django_filters import rest_framework as filters
 from rest_framework import generics
 
 from apps.bookings.models import Booking, BookingStatus
-from apps.bookings.signals import DEFAULT_SERVICE_COSTS
+from apps.bookings.signals import resolve_service_cost
 
 from .models import Invoice, PaymentStatus
 from .serializers import InvoiceSerializer
@@ -35,15 +35,11 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
             garage__owner=owner,
             status=BookingStatus.COMPLETED,
             invoice__isnull=True,
-        )
+        ).select_related('garage')
         for booking in completed:
-            service_cost = DEFAULT_SERVICE_COSTS.get(
-                booking.service_type,
-                Decimal('999.00'),
-            )
             Invoice.objects.create(
                 booking=booking,
-                service_cost=service_cost,
+                service_cost=resolve_service_cost(booking),
                 parts_cost=Decimal('0.00'),
                 payment_status=PaymentStatus.PENDING,
             )

@@ -10,7 +10,8 @@ class GarageSerializer(serializers.ModelSerializer):
         model = Garage
         fields = (
             'id', 'owner', 'owner_name', 'garage_name', 'address',
-            'opening_time', 'closing_time', 'created_at', 'updated_at',
+            'opening_time', 'closing_time', 'default_service_cost',
+            'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'owner', 'created_at', 'updated_at')
 
