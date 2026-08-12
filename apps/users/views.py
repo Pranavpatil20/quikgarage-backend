@@ -53,4 +53,4 @@ class CustomerListView(generics.ListAPIView):
         customer_ids = Booking.objects.filter(
             garage__owner=user,
         ).values_list('customer_id', flat=True).distinct()
-        return User.objects.filter(id__in=customer_ids, role='customer')
+        return User.objects.filter(id__in=customer_ids).exclude(role='owner')
