@@ -54,7 +54,11 @@ def get_available_slots(garage: Garage, booking_date) -> list[dict]:
 
 def validate_booking_slot(garage: Garage, booking_date, time_slot, exclude_booking_id=None):
     if time_slot < garage.opening_time or time_slot >= garage.closing_time:
-        raise ValidationError({'time_slot': 'Selected time is outside garage operating hours.'})
+        open_label = garage.opening_time.strftime('%I:%M %p').lstrip('0')
+        close_label = garage.closing_time.strftime('%I:%M %p').lstrip('0')
+        raise ValidationError({
+            'time_slot': f'Booking time must be between {open_label} and {close_label}.',
+        })
 
     now = timezone.localtime()
     if _aware_slot_datetime(booking_date, time_slot) <= now:
