@@ -30,12 +30,14 @@ class PhoneAuthSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
     name = serializers.CharField(max_length=120, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=UserRole.choices, required=False)
+    fcm_token = serializers.CharField(required=False, allow_blank=True)
 
 
 class PasswordLoginSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20)
     password = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=UserRole.choices, required=False)
+    fcm_token = serializers.CharField(required=False, allow_blank=True)
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -45,6 +47,7 @@ class RegisterSerializer(serializers.Serializer):
     confirm_password = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=UserRole.choices)
     garage_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    fcm_token = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
         if attrs['password'] != attrs['confirm_password']:

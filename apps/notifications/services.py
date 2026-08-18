@@ -40,6 +40,18 @@ def send_fcm_to_token(token: str, title: str, body: str, data: dict | None = Non
             notification=messaging.Notification(title=title, body=body),
             data={k: str(v) for k, v in (data or {}).items()},
             token=token,
+            android=messaging.AndroidConfig(
+                priority='high',
+                notification=messaging.AndroidNotification(
+                    channel_id='quikgarage_channel',
+                ),
+            ),
+            apns=messaging.APNSConfig(
+                headers={'apns-priority': '10'},
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(sound='default', badge=1),
+                ),
+            ),
         )
         messaging.send(message)
         return True

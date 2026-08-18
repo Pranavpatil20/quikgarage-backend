@@ -185,7 +185,17 @@ if os.getenv('CELERY_TASK_ALWAYS_EAGER', 'false').lower() == 'true':
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
 
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'service-due-reminders-daily': {
+        'task': 'apps.notifications.tasks.send_service_due_reminders',
+        'schedule': crontab(hour=9, minute=0),
+    },
+}
+
 FIREBASE_CREDENTIALS_PATH = os.getenv('FIREBASE_CREDENTIALS_PATH', '')
+CRON_SECRET = os.getenv('CRON_SECRET', '')
 
 # Production HTTPS (Render terminates TLS)
 if not DEBUG:

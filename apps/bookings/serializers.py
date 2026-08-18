@@ -22,9 +22,11 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'customer', 'customer_detail', 'garage', 'garage_detail',
             'vehicle', 'vehicle_detail', 'service_type', 'booking_date',
             'time_slot', 'notes', 'status', 'can_cancel',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'completed_at',
         )
-        read_only_fields = ('id', 'customer', 'status', 'created_at', 'updated_at')
+        read_only_fields = (
+            'id', 'customer', 'status', 'created_at', 'updated_at', 'completed_at',
+        )
 
     def validate(self, attrs):
         request = self.context['request']

@@ -50,6 +50,8 @@ class Booking(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    service_reminder_sent_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'bookings'

@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from .models import Booking, BookingStatus
 
@@ -37,15 +38,27 @@ def cache_old_status(sender, instance, **kwargs):
     else:
         instance._old_status = None
 
+    if instance.status == BookingStatus.COMPLETED and not instance.completed_at:
+        instance.completed_at = timezone.now()
+    if instance.status != BookingStatus.COMPLETED:
+        instance.completed_at = instance.completed_at  # keep historical if any
+
 
 @receiver(post_save, sender=Booking)
-def notify_status_change(sender, instance, created, **kwargs):
-    old_status = getattr(instance, '_old_status', None)
-    if created or old_status == instance.status:
-        return
+def notify_booking_events(sender, instance, created, **kwargs):
     try:
-        from apps.notifications.tasks import send_booking_status_notification
-        send_booking_status_notification.delay(instance.pk, instance.status)
+        from apps.notifications.tasks import (
+            _enqueue,
+            notify_booking_created,
+            send_booking_status_notification,
+        )
+        if created:
+            _enqueue(notify_booking_created, instance.pk)
+            return
+        old_status = getattr(instance, '_old_status', None)
+        if old_status == instance.status:
+            return
+        _enqueue(send_booking_status_notification, instance.pk, instance.status)
     except Exception:
         pass
 

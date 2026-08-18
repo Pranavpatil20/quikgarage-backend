@@ -23,6 +23,13 @@ from .serializers import (
 User = get_user_model()
 
 
+def _save_fcm_token(user, token: str | None):
+    if not token:
+        return
+    user.fcm_token = token
+    user.save(update_fields=['fcm_token', 'updated_at'])
+
+
 def _issue_tokens(user):
     refresh = RefreshToken.for_user(user)
     return {
@@ -59,11 +66,10 @@ class FirebaseLoginView(APIView):
             if data.get('role'):
                 user.role = data['role']
                 update_fields.append('role')
-            if data.get('fcm_token'):
-                user.fcm_token = data['fcm_token']
-                update_fields.append('fcm_token')
             if update_fields:
                 user.save(update_fields=update_fields + ['updated_at'])
+
+        _save_fcm_token(user, data.get('fcm_token'))
 
         return Response({
             **_issue_tokens(user),
@@ -108,6 +114,8 @@ class DevLoginView(APIView):
             if update_fields:
                 user.save(update_fields=update_fields + ['updated_at'])
 
+        _save_fcm_token(user, data.get('fcm_token'))
+
         return Response({
             **_issue_tokens(user),
             'is_new_user': created,
@@ -146,6 +154,8 @@ class RegisterView(APIView):
                 closing_time=time(18, 0),
             )
 
+        _save_fcm_token(user, data.get('fcm_token'))
+
         return Response({
             **_issue_tokens(user),
             'is_new_user': True,
@@ -183,6 +193,8 @@ class PasswordLoginView(APIView):
             else:
                 message = 'You are not an owner. Please sign in with your customer account.'
             return Response({'detail': message}, status=status.HTTP_403_FORBIDDEN)
+
+        _save_fcm_token(user, data.get('fcm_token'))
 
         return Response({
             **_issue_tokens(user),
