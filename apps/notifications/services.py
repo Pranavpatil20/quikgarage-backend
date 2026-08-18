@@ -8,21 +8,32 @@ logger = logging.getLogger(__name__)
 _firebase_app = None
 
 
+def _load_firebase_certificate():
+    from firebase_admin import credentials
+
+    raw = getattr(settings, 'FIREBASE_CREDENTIALS_JSON', '') or ''
+    if raw.strip():
+        return credentials.Certificate(json.loads(raw))
+
+    cred_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', '') or ''
+    if cred_path:
+        return credentials.Certificate(cred_path)
+    return None
+
+
 def _get_firebase_app():
     global _firebase_app
     if _firebase_app is not None:
         return _firebase_app
-    cred_path = settings.FIREBASE_CREDENTIALS_PATH
-    if not cred_path:
-        return None
     try:
         import firebase_admin
-        from firebase_admin import credentials
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(cred_path)
-            _firebase_app = firebase_admin.initialize_app(cred)
-        else:
+        if firebase_admin._apps:
             _firebase_app = firebase_admin.get_app()
+            return _firebase_app
+        cert = _load_firebase_certificate()
+        if cert is None:
+            return None
+        _firebase_app = firebase_admin.initialize_app(cert)
     except Exception as exc:
         logger.error('Firebase init failed: %s', exc)
         return None
