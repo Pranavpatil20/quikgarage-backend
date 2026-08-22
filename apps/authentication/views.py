@@ -217,3 +217,46 @@ class RefreshTokenView(APIView):
             return Response({'access': str(refresh.access_token)})
         except Exception:
             return Response({'detail': 'Invalid refresh token'}, status=401)
+
+
+class SetupAdminView(APIView):
+    """
+    Create Django admin superuser via HTTP (for Render free tier — no Shell).
+    Header: X-Setup-Secret must match CRON_SECRET env var on the server.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        expected = getattr(settings, 'CRON_SECRET', '') or ''
+        provided = request.headers.get('X-Setup-Secret', '')
+        if not expected or provided != expected:
+            return Response({'detail': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+
+        phone_raw = (request.data.get('phone') or '').strip()
+        password = request.data.get('password') or ''
+        name = (request.data.get('name') or 'Admin').strip() or 'Admin'
+
+        if not phone_raw:
+            return Response({'detail': 'phone is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(password) < 6:
+            return Response({'detail': 'password must be at least 6 characters.'}, status=400)
+
+        phone = normalize_phone(phone_raw)
+
+        from apps.users.admin_setup import create_or_update_superuser
+
+        try:
+            user, created = create_or_update_superuser(
+                phone=phone,
+                password=password,
+                name=name,
+            )
+        except ValueError as exc:
+            return Response({'detail': str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'detail': 'Superuser created.' if created else 'Superuser updated.',
+            'phone': user.phone,
+            'created': created,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)

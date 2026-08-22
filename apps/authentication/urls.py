@@ -7,6 +7,7 @@ from .views import (
     PasswordLoginView,
     RefreshTokenView,
     RegisterView,
+    SetupAdminView,
 )
 
 urlpatterns = [
@@ -16,4 +17,5 @@ urlpatterns = [
     path('firebase/', FirebaseLoginView.as_view(), name='firebase-login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('refresh/', RefreshTokenView.as_view(), name='custom-refresh'),
+    path('setup-admin/', SetupAdminView.as_view(), name='setup-admin'),
 ]

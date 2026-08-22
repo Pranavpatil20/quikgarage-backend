@@ -1,7 +1,8 @@
 """Create a Django admin superuser non-interactively."""
 
-from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+
+from apps.users.admin_setup import create_or_update_superuser
 
 
 class Command(BaseCommand):
@@ -13,23 +14,14 @@ class Command(BaseCommand):
         parser.add_argument('--name', default='Admin', help='Display name')
 
     def handle(self, *args, **options):
-        User = get_user_model()
-        phone = options['phone'].strip()
-        password = options['password']
-        name = options['name'].strip() or 'Admin'
-
-        if not phone:
-            raise CommandError('Phone is required.')
-
-        user, created = User.objects.get_or_create(
-            phone=phone,
-            defaults={'name': name, 'role': 'owner'},
-        )
-        user.name = name
-        user.is_staff = True
-        user.is_superuser = True
-        user.set_password(password)
-        user.save()
+        try:
+            user, created = create_or_update_superuser(
+                phone=options['phone'],
+                password=options['password'],
+                name=options['name'],
+            )
+        except ValueError as exc:
+            raise CommandError(str(exc)) from exc
 
         verb = 'Created' if created else 'Updated'
-        self.stdout.write(self.style.SUCCESS(f'{verb} superuser {phone}'))
+        self.stdout.write(self.style.SUCCESS(f'{verb} superuser {user.phone}'))
