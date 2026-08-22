@@ -25,3 +25,36 @@ class InvoiceSerializer(serializers.ModelSerializer):
         ):
             raise serializers.ValidationError('Invoice already exists for this booking.')
         return booking
+
+    def validate_line_items(self, items):
+        if items is None:
+            return []
+        if not isinstance(items, list):
+            raise serializers.ValidationError('line_items must be a list.')
+        cleaned = []
+        for raw in items:
+            if not isinstance(raw, dict):
+                continue
+            name = str(raw.get('name') or '').strip()
+            if not name:
+                raise serializers.ValidationError('Each line item needs a name.')
+            try:
+                qty = float(raw.get('qty', 1) or 1)
+                rate = float(raw.get('rate', 0) or 0)
+            except (TypeError, ValueError) as exc:
+                raise serializers.ValidationError('Invalid qty/rate.') from exc
+            amount = qty * rate
+            if raw.get('amount') is not None:
+                try:
+                    amount = float(raw.get('amount'))
+                except (TypeError, ValueError):
+                    pass
+            cleaned.append({
+                'category': str(raw.get('category') or 'parts').lower(),
+                'name': name,
+                'qty': qty,
+                'rate': rate,
+                'gst_percent': 0,
+                'amount': round(amount, 2),
+            })
+        return cleaned

@@ -180,11 +180,9 @@ class OwnerBookingServiceItemsSerializer(serializers.ModelSerializer):
             try:
                 qty = float(raw.get('qty', 1) or 1)
                 rate = float(raw.get('rate', 0) or 0)
-                gst = float(raw.get('gst_percent', 0) or 0)
             except (TypeError, ValueError) as exc:
-                raise serializers.ValidationError('Invalid qty/rate/gst.') from exc
-            taxable = qty * rate
-            amount = taxable + (taxable * gst / 100.0)
+                raise serializers.ValidationError('Invalid qty/rate.') from exc
+            amount = qty * rate
             if raw.get('amount') is not None:
                 try:
                     amount = float(raw.get('amount'))
@@ -195,7 +193,7 @@ class OwnerBookingServiceItemsSerializer(serializers.ModelSerializer):
                 'name': name,
                 'qty': qty,
                 'rate': rate,
-                'gst_percent': gst,
+                'gst_percent': 0,
                 'amount': round(amount, 2),
             })
         return cleaned
