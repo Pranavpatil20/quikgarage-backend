@@ -4,7 +4,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.garages.models import Garage
+from apps.users.permissions import OwnerSubscriptionActive
+from apps.users.subscription import owner_has_active_subscription
 
 from .models import Booking, BookingStatus
 from .serializers import (
@@ -56,6 +57,7 @@ class OwnerBookingListView(generics.ListAPIView):
     serializer_class = BookingSerializer
     filterset_class = BookingFilter
     search_fields = ('customer__name', 'customer__phone', 'vehicle__vehicle_number')
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_queryset(self):
         return Booking.objects.filter(
@@ -65,6 +67,7 @@ class OwnerBookingListView(generics.ListAPIView):
 
 class OwnerBookingCreateView(generics.CreateAPIView):
     serializer_class = OwnerBookingCreateSerializer
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_queryset(self):
         return Booking.objects.filter(garage__owner=self.request.user)
@@ -73,17 +76,28 @@ class OwnerBookingCreateView(generics.CreateAPIView):
 class OwnerBookingStatusView(generics.UpdateAPIView):
     serializer_class = BookingStatusUpdateSerializer
     http_method_names = ['patch', 'put']
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_queryset(self):
         return Booking.objects.filter(garage__owner=self.request.user)
 
 
 class AvailableSlotsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request, garage_id):
+        from apps.garages.models import Garage
+
         try:
-            garage = Garage.objects.get(pk=garage_id)
+            garage = Garage.objects.select_related('owner').get(pk=garage_id)
         except Garage.DoesNotExist:
             return Response({'detail': 'Garage not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not owner_has_active_subscription(garage.owner):
+            return Response(
+                {'detail': 'Garage is not available for booking.', 'code': 'subscription_required'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         date_str = request.query_params.get('date')
         if not date_str:
@@ -95,9 +109,16 @@ class AvailableSlotsView(APIView):
 
 
 class TodayBookingsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
     def get(self, request):
         today = timezone.localdate()
         if request.user.is_owner:
+            if not owner_has_active_subscription(request.user):
+                return Response(
+                    {'detail': 'Subscription payment required.', 'code': 'subscription_required'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             qs = Booking.objects.filter(
                 garage__owner=request.user,
                 booking_date=today,

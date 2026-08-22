@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import User
+from .permissions import OwnerSubscriptionActive
 from .serializers import RoleSelectionSerializer, UserProfileUpdateSerializer, UserSerializer
 
 
@@ -42,7 +43,7 @@ class SetRoleView(APIView):
 class CustomerListView(generics.ListAPIView):
     """Owner: list customers who booked at owner's garage."""
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
     search_fields = ('name', 'phone')
 
     def get_queryset(self):

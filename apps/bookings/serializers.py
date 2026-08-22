@@ -6,6 +6,8 @@ from apps.users.serializers import UserSerializer
 from apps.vehicles.models import Vehicle
 from apps.vehicles.serializers import VehicleSerializer
 
+from apps.users.subscription import owner_has_active_subscription
+
 from .models import Booking, BookingStatus
 from .services import validate_booking_slot, validate_vehicle_ownership
 
@@ -37,6 +39,15 @@ class BookingSerializer(serializers.ModelSerializer):
 
         if vehicle:
             validate_vehicle_ownership(request.user, vehicle)
+
+        if garage:
+            owner = getattr(garage, 'owner', None)
+            if owner is None:
+                owner = garage.owner
+            if not owner_has_active_subscription(owner):
+                raise serializers.ValidationError(
+                    {'garage': 'This garage is not available for booking.'},
+                )
 
         if garage and booking_date and time_slot:
             validate_booking_slot(

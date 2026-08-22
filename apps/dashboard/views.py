@@ -9,11 +9,11 @@ from rest_framework.views import APIView
 
 from apps.bookings.models import Booking, BookingStatus
 from apps.invoices.models import Invoice, PaymentStatus
-from apps.users.models import User
+from apps.users.permissions import OwnerSubscriptionActive
 
 
 class OwnerDashboardMetricsView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OwnerSubscriptionActive]
 
     def get(self, request):
         if not request.user.is_owner:

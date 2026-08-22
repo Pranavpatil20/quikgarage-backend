@@ -11,6 +11,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.garages.models import Garage
 from apps.users.models import UserRole
 from apps.users.serializers import UserSerializer
+from apps.users.subscription import trial_ends_at_for_new_owner
 
 from .serializers import (
     FirebaseAuthSerializer,
@@ -146,6 +147,8 @@ class RegisterView(APIView):
         )
 
         if data['role'] == UserRole.OWNER:
+            user.trial_ends_at = trial_ends_at_for_new_owner()
+            user.save(update_fields=['trial_ends_at'])
             Garage.objects.create(
                 owner=user,
                 garage_name=data['garage_name'].strip(),

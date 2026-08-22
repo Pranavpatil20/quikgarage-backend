@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.utils import timezone
+from django.utils import timezone
 
 
 class UserRole(models.TextChoices):
@@ -32,6 +34,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=20, choices=UserRole.choices, default=UserRole.CUSTOMER)
     firebase_uid = models.CharField(max_length=128, blank=True, null=True, unique=True)
     fcm_token = models.TextField(blank=True)
+    trial_ends_at = models.DateTimeField(null=True, blank=True)
+    subscription_paid_until = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -56,3 +60,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_customer(self):
         return self.role == UserRole.CUSTOMER
+
+    @property
+    def subscription_active(self) -> bool:
+        if not self.is_owner:
+            return True
+        now = timezone.now()
+        if self.trial_ends_at and now < self.trial_ends_at:
+            return True
+        if self.subscription_paid_until and now.date() <= self.subscription_paid_until:
+            return True
+        return False
+
+    @property
+    def is_payment_locked(self) -> bool:
+        return self.is_owner and not self.subscription_active

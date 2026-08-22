@@ -1,10 +1,11 @@
 from decimal import Decimal
 
 from django_filters import rest_framework as filters
-from rest_framework import generics
+from rest_framework import generics, permissions
 
 from apps.bookings.models import Booking, BookingStatus
 from apps.bookings.signals import resolve_service_cost
+from apps.users.permissions import OwnerSubscriptionActive
 
 from .models import Invoice, PaymentStatus
 from .serializers import InvoiceSerializer
@@ -22,6 +23,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
     serializer_class = InvoiceSerializer
     filterset_class = InvoiceFilter
     search_fields = ('booking__vehicle__vehicle_number', 'booking__customer__phone')
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_queryset(self):
         self._ensure_invoices_for_completed(self.request.user)
@@ -47,6 +49,7 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
 
 class InvoiceDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = InvoiceSerializer
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_queryset(self):
         return Invoice.objects.filter(booking__garage__owner=self.request.user)
