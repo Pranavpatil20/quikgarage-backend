@@ -1,10 +1,8 @@
-from decimal import Decimal
-
 from django_filters import rest_framework as filters
 from rest_framework import generics, permissions
 
 from apps.bookings.models import Booking, BookingStatus
-from apps.bookings.signals import resolve_service_cost
+from apps.bookings.signals import build_invoice_from_booking
 from apps.users.permissions import OwnerSubscriptionActive
 
 from .models import Invoice, PaymentStatus
@@ -39,10 +37,12 @@ class InvoiceListCreateView(generics.ListCreateAPIView):
             invoice__isnull=True,
         ).select_related('garage')
         for booking in completed:
+            service_cost, parts_cost, line_items = build_invoice_from_booking(booking)
             Invoice.objects.create(
                 booking=booking,
-                service_cost=resolve_service_cost(booking),
-                parts_cost=Decimal('0.00'),
+                service_cost=service_cost,
+                parts_cost=parts_cost,
+                line_items=line_items,
                 payment_status=PaymentStatus.PENDING,
             )
 

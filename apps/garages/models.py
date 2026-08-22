@@ -20,6 +20,16 @@ class Garage(models.Model):
         default=Decimal('899.00'),
         help_text='Default General Service amount used when creating invoices.',
     )
+    service_rates = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Default prices by service type key, e.g. {"oil_change": "499"}',
+    )
+    part_rates = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Default prices by part name, e.g. {"Engine Oil 10W30": "450"}',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

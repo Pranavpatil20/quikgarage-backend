@@ -6,6 +6,7 @@ from .views import (
     CustomerBookingListCreateView,
     OwnerBookingCreateView,
     OwnerBookingListView,
+    OwnerBookingServiceItemsView,
     OwnerBookingStatusView,
     TodayBookingsView,
 )
@@ -17,5 +18,10 @@ urlpatterns = [
     path('owner/', OwnerBookingListView.as_view(), name='owner-booking-list'),
     path('owner/create/', OwnerBookingCreateView.as_view(), name='owner-booking-create'),
     path('owner/<int:pk>/status/', OwnerBookingStatusView.as_view(), name='owner-booking-status'),
+    path(
+        'owner/<int:pk>/service-items/',
+        OwnerBookingServiceItemsView.as_view(),
+        name='owner-booking-service-items',
+    ),
     path('slots/<int:garage_id>/', AvailableSlotsView.as_view(), name='available-slots'),
 ]

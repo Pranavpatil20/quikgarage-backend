@@ -12,6 +12,7 @@ from .serializers import (
     BookingSerializer,
     BookingStatusUpdateSerializer,
     OwnerBookingCreateSerializer,
+    OwnerBookingServiceItemsSerializer,
 )
 from .services import get_available_slots
 
@@ -75,6 +76,16 @@ class OwnerBookingCreateView(generics.CreateAPIView):
 
 class OwnerBookingStatusView(generics.UpdateAPIView):
     serializer_class = BookingStatusUpdateSerializer
+    http_method_names = ['patch', 'put']
+    permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
+
+    def get_queryset(self):
+        return Booking.objects.filter(garage__owner=self.request.user)
+
+
+class OwnerBookingServiceItemsView(generics.UpdateAPIView):
+    """Owner updates parts/labour while booking is in progress (or before complete)."""
+    serializer_class = OwnerBookingServiceItemsSerializer
     http_method_names = ['patch', 'put']
     permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 

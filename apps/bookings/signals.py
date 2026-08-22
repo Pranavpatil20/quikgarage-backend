@@ -20,11 +20,67 @@ DEFAULT_SERVICE_COSTS = {
 
 
 def resolve_service_cost(booking) -> Decimal:
-    """Prefer garage default General Service amount for invoice calculation."""
+    """Sum garage service rates for selected types, else garage default / fallbacks."""
     garage = getattr(booking, 'garage', None)
+    keys = [k.strip() for k in (booking.service_type or '').split(',') if k.strip()]
+    if not keys:
+        keys = ['general_service']
+
+    rates = {}
+    if garage is not None and isinstance(getattr(garage, 'service_rates', None), dict):
+        rates = garage.service_rates
+
+    total = Decimal('0.00')
+    matched = False
+    for key in keys:
+        raw = rates.get(key)
+        if raw is not None and str(raw).strip() != '':
+            total += Decimal(str(raw))
+            matched = True
+        elif key in DEFAULT_SERVICE_COSTS:
+            total += DEFAULT_SERVICE_COSTS[key]
+            matched = True
+
+    if matched and total > 0:
+        return total
+
     if garage is not None and getattr(garage, 'default_service_cost', None) is not None:
         return Decimal(garage.default_service_cost)
-    return DEFAULT_SERVICE_COSTS.get(booking.service_type, Decimal('899.00'))
+    return DEFAULT_SERVICE_COSTS.get(keys[0], Decimal('899.00'))
+
+
+def _line_amount(item: dict) -> Decimal:
+    try:
+        return Decimal(str(item.get('amount', 0)))
+    except Exception:
+        return Decimal('0.00')
+
+
+def build_invoice_from_booking(booking) -> tuple[Decimal, Decimal, list]:
+    """Return (service_cost, parts_cost, line_items) from booking.service_items or defaults."""
+    items = list(booking.service_items or [])
+    if items:
+        service = Decimal('0.00')
+        parts = Decimal('0.00')
+        for item in items:
+            amt = _line_amount(item)
+            cat = (item.get('category') or 'parts').lower()
+            if cat == 'labour':
+                service += amt
+            else:
+                parts += amt
+        return service, parts, items
+
+    service = resolve_service_cost(booking)
+    labour_line = {
+        'category': 'labour',
+        'name': booking.service_type or 'general_service',
+        'qty': 1,
+        'rate': float(service),
+        'gst_percent': 0,
+        'amount': float(service),
+    }
+    return service, Decimal('0.00'), [labour_line]
 
 
 @receiver(pre_save, sender=Booking)
@@ -86,10 +142,11 @@ def create_invoice_on_completed(sender, instance, created, **kwargs):
         except Exception:
             pass
 
-    service_cost = resolve_service_cost(instance)
+    service_cost, parts_cost, line_items = build_invoice_from_booking(instance)
     Invoice.objects.create(
         booking=instance,
         service_cost=service_cost,
-        parts_cost=Decimal('0.00'),
+        parts_cost=parts_cost,
+        line_items=line_items,
         payment_status=PaymentStatus.PENDING,
     )

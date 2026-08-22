@@ -38,10 +38,18 @@ class Booking(models.Model):
         on_delete=models.CASCADE,
         related_name='bookings',
     )
-    service_type = models.CharField(max_length=40, choices=ServiceType.choices)
+    service_type = models.CharField(
+        max_length=255,
+        help_text='Comma-separated service type keys, e.g. oil_change,brake_service',
+    )
     booking_date = models.DateField(db_index=True)
     time_slot = models.TimeField(db_index=True)
     notes = models.TextField(blank=True)
+    service_items = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='Parts/labour used during service: [{category,name,qty,rate,gst_percent,amount}]',
+    )
     status = models.CharField(
         max_length=20,
         choices=BookingStatus.choices,

@@ -12,7 +12,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = (
             'id', 'booking', 'booking_detail', 'service_cost', 'parts_cost',
-            'total_amount', 'payment_status', 'created_at', 'updated_at',
+            'total_amount', 'line_items', 'payment_status', 'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'total_amount', 'created_at', 'updated_at')
 

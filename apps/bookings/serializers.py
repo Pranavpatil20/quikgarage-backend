@@ -23,7 +23,7 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'customer', 'customer_detail', 'garage', 'garage_detail',
             'vehicle', 'vehicle_detail', 'service_type', 'booking_date',
-            'time_slot', 'notes', 'status', 'can_cancel',
+            'time_slot', 'notes', 'status', 'can_cancel', 'service_items',
             'created_at', 'updated_at', 'completed_at',
         )
         read_only_fields = (
@@ -66,11 +66,12 @@ class OwnerBookingCreateSerializer(serializers.ModelSerializer):
     customer_phone = serializers.CharField(write_only=True)
     vehicle_number = serializers.CharField(write_only=True)
     make_model = serializers.CharField(required=False, allow_blank=True)
+    vehicle_type = serializers.CharField(required=False, allow_blank=True, default='bike')
 
     class Meta:
         model = Booking
         fields = (
-            'customer_phone', 'vehicle_number', 'make_model',
+            'customer_phone', 'vehicle_number', 'make_model', 'vehicle_type',
             'garage', 'service_type', 'booking_date', 'time_slot', 'notes',
         )
 
@@ -87,16 +88,24 @@ class OwnerBookingCreateSerializer(serializers.ModelSerializer):
         phone = normalize_phone(attrs.pop('customer_phone'))
         vehicle_number = attrs.pop('vehicle_number')
         make_model = attrs.pop('make_model', '')
+        vehicle_type = (attrs.pop('vehicle_type', None) or 'bike').lower()
+        if vehicle_type not in ('bike', 'car'):
+            vehicle_type = 'bike'
 
         customer, _ = User.objects.get_or_create(
             phone=phone,
             defaults={'name': phone, 'role': UserRole.CUSTOMER},
         )
-        vehicle, _ = Vehicle.objects.get_or_create(
+        vehicle, created = Vehicle.objects.get_or_create(
             customer=customer,
             vehicle_number=vehicle_number.upper(),
-            defaults={'make_model': make_model, 'vehicle_type': 'car'},
+            defaults={'make_model': make_model, 'vehicle_type': vehicle_type},
         )
+        if not created and vehicle_type:
+            vehicle.vehicle_type = vehicle_type
+            if make_model:
+                vehicle.make_model = make_model
+            vehicle.save(update_fields=['vehicle_type', 'make_model'])
 
         attrs['customer'] = customer
         attrs['vehicle'] = vehicle
@@ -144,6 +153,52 @@ class BookingStatusUpdateSerializer(serializers.ModelSerializer):
                 f'Cannot transition from {instance.status} to {value}.',
             )
         return value
+
+    def to_representation(self, instance):
+        return BookingSerializer(instance, context=self.context).data
+
+
+class OwnerBookingServiceItemsSerializer(serializers.ModelSerializer):
+    """Owner updates parts/labour used while service is in progress."""
+
+    class Meta:
+        model = Booking
+        fields = ('service_items', 'service_type', 'notes')
+
+    def validate_service_items(self, value):
+        if value is None:
+            return []
+        if not isinstance(value, list):
+            raise serializers.ValidationError('service_items must be a list.')
+        cleaned = []
+        for raw in value:
+            if not isinstance(raw, dict):
+                raise serializers.ValidationError('Each service item must be an object.')
+            name = str(raw.get('name') or '').strip()
+            if not name:
+                raise serializers.ValidationError('Each item needs a name.')
+            try:
+                qty = float(raw.get('qty', 1) or 1)
+                rate = float(raw.get('rate', 0) or 0)
+                gst = float(raw.get('gst_percent', 0) or 0)
+            except (TypeError, ValueError) as exc:
+                raise serializers.ValidationError('Invalid qty/rate/gst.') from exc
+            taxable = qty * rate
+            amount = taxable + (taxable * gst / 100.0)
+            if raw.get('amount') is not None:
+                try:
+                    amount = float(raw.get('amount'))
+                except (TypeError, ValueError):
+                    pass
+            cleaned.append({
+                'category': str(raw.get('category') or 'parts').lower(),
+                'name': name,
+                'qty': qty,
+                'rate': rate,
+                'gst_percent': gst,
+                'amount': round(amount, 2),
+            })
+        return cleaned
 
     def to_representation(self, instance):
         return BookingSerializer(instance, context=self.context).data
