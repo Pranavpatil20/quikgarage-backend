@@ -16,7 +16,7 @@ class ServiceType(models.TextChoices):
     OIL_CHANGE = 'oil_change', 'Oil Change'
     AC_SERVICE = 'ac_service', 'AC Service'
     BRAKE_SERVICE = 'brake_service', 'Brake Service'
-    WASH = 'wash', 'Car Wash'
+    WASH = 'wash', 'Wash'
     REPAIR = 'repair', 'Repair'
     INSPECTION = 'inspection', 'Inspection'
     OTHER = 'other', 'Other'
