@@ -19,8 +19,8 @@ class GarageListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_owner:
-            return Garage.objects.filter(owner=user)
-        return filter_garages_for_customers(Garage.objects.all())
+            return Garage.objects.filter(owner=user).select_related('owner')
+        return filter_garages_for_customers(Garage.objects.select_related('owner').all())
 
 
 class GarageDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -30,8 +30,8 @@ class GarageDetailView(generics.RetrieveUpdateDestroyAPIView):
     def get_queryset(self):
         user = self.request.user
         if user.is_owner:
-            return Garage.objects.filter(owner=user)
-        return filter_garages_for_customers(Garage.objects.all())
+            return Garage.objects.filter(owner=user).select_related('owner')
+        return filter_garages_for_customers(Garage.objects.select_related('owner').all())
 
 
 class MyGarageView(generics.RetrieveAPIView):
@@ -40,7 +40,7 @@ class MyGarageView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated, OwnerSubscriptionActive]
 
     def get_object(self):
-        garage = Garage.objects.filter(owner=self.request.user).first()
+        garage = Garage.objects.filter(owner=self.request.user).select_related('owner').first()
         if not garage:
             from rest_framework.exceptions import NotFound
             raise NotFound('No garage configured. Create one first.')

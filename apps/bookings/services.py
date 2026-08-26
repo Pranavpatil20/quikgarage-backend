@@ -8,10 +8,23 @@ from apps.garages.models import Garage
 from .models import Booking, BookingStatus
 
 
-def generate_time_slots(garage: Garage, interval_minutes: int = 60) -> list[time]:
+def generate_time_slots(
+    garage: Garage,
+    booking_date=None,
+    interval_minutes: int = 60,
+) -> list[time]:
+    if booking_date is None:
+        booking_date = timezone.localdate()
+        is_open, opening, closing = True, garage.opening_time, garage.closing_time
+    else:
+        is_open, opening, closing = garage.hours_for_date(booking_date)
+
+    if not is_open:
+        return []
+
     slots = []
-    current = datetime.combine(timezone.localdate(), garage.opening_time)
-    end = datetime.combine(timezone.localdate(), garage.closing_time)
+    current = datetime.combine(booking_date, opening)
+    end = datetime.combine(booking_date, closing)
     delta = timedelta(minutes=interval_minutes)
     while current < end:
         slots.append(current.time())
@@ -35,8 +48,17 @@ def _aware_slot_datetime(booking_date, slot_time: time):
     return slot_dt
 
 
-def get_available_slots(garage: Garage, booking_date) -> list[dict]:
-    all_slots = generate_time_slots(garage)
+def get_available_slots(garage: Garage, booking_date) -> dict:
+    is_open, opening, closing = garage.hours_for_date(booking_date)
+    if not is_open:
+        return {
+            'closed': True,
+            'slots': [],
+            'opening_time': None,
+            'closing_time': None,
+        }
+
+    all_slots = generate_time_slots(garage, booking_date)
     booked = get_booked_slots(garage.id, booking_date)
     now = timezone.localtime()
     result = []
@@ -49,13 +71,24 @@ def get_available_slots(garage: Garage, booking_date) -> list[dict]:
             'time': slot.strftime('%H:%M'),
             'available': available,
         })
-    return result
+    return {
+        'closed': False,
+        'slots': result,
+        'opening_time': opening.strftime('%H:%M'),
+        'closing_time': closing.strftime('%H:%M'),
+    }
 
 
 def validate_booking_slot(garage: Garage, booking_date, time_slot, exclude_booking_id=None):
-    if time_slot < garage.opening_time or time_slot >= garage.closing_time:
-        open_label = garage.opening_time.strftime('%I:%M %p').lstrip('0')
-        close_label = garage.closing_time.strftime('%I:%M %p').lstrip('0')
+    is_open, opening, closing = garage.hours_for_date(booking_date)
+    if not is_open:
+        raise ValidationError({
+            'booking_date': 'Garage is closed on this day. Please choose another date.',
+        })
+
+    if time_slot < opening or time_slot >= closing:
+        open_label = opening.strftime('%I:%M %p').lstrip('0')
+        close_label = closing.strftime('%I:%M %p').lstrip('0')
         raise ValidationError({
             'time_slot': f'Booking time must be between {open_label} and {close_label}.',
         })

@@ -37,7 +37,7 @@ class CustomerBookingListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         return Booking.objects.filter(
             customer=self.request.user,
-        ).select_related('garage', 'vehicle', 'customer')
+        ).select_related('garage', 'garage__owner', 'vehicle', 'customer')
 
 
 class CustomerBookingDetailView(generics.RetrieveDestroyAPIView):
@@ -63,7 +63,7 @@ class OwnerBookingListView(generics.ListAPIView):
     def get_queryset(self):
         return Booking.objects.filter(
             garage__owner=self.request.user,
-        ).select_related('garage', 'vehicle', 'customer')
+        ).select_related('garage', 'garage__owner', 'vehicle', 'customer')
 
 
 class OwnerBookingCreateView(generics.CreateAPIView):
@@ -115,8 +115,15 @@ class AvailableSlotsView(APIView):
             return Response({'detail': 'date query param required (YYYY-MM-DD).'}, status=400)
         from datetime import datetime
         booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        slots = get_available_slots(garage, booking_date)
-        return Response({'garage_id': garage_id, 'date': date_str, 'slots': slots})
+        availability = get_available_slots(garage, booking_date)
+        return Response({
+            'garage_id': garage_id,
+            'date': date_str,
+            'closed': availability.get('closed', False),
+            'opening_time': availability.get('opening_time'),
+            'closing_time': availability.get('closing_time'),
+            'slots': availability.get('slots', []),
+        })
 
 
 class TodayBookingsView(APIView):
@@ -136,5 +143,5 @@ class TodayBookingsView(APIView):
             ).exclude(status=BookingStatus.CANCELLED)
         else:
             qs = Booking.objects.filter(customer=request.user, booking_date=today)
-        serializer = BookingSerializer(qs.select_related('garage', 'vehicle', 'customer'), many=True)
+        serializer = BookingSerializer(qs.select_related('garage', 'garage__owner', 'vehicle', 'customer'), many=True)
         return Response(serializer.data)
