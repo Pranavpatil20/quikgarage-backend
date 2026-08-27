@@ -1,14 +1,12 @@
 # QuikGarage — Render Blueprint
 # Docs: https://render.com/docs/blueprint-spec
 #
+# Database: Neon (not Render Postgres). Set DATABASE_URL manually in the
+# Render dashboard to your Neon pooled connection string.
+# See docs/RENDER_DEPLOY.md
+#
 # Deploy: Connect this GitHub repo in Render → New → Blueprint → select this file.
 # Or create services manually using the steps in README.md / docs/RENDER_DEPLOY.md
-
-databases:
-  - name: quikgarage-db
-    plan: free
-    databaseName: quikgarage
-    user: quikgarage
 
 services:
   - type: web
@@ -26,10 +24,9 @@ services:
         value: "false"
       - key: DJANGO_SECRET_KEY
         generateValue: true
+      # Paste Neon pooled connection string in Render Dashboard → Environment
       - key: DATABASE_URL
-        fromDatabase:
-          name: quikgarage-db
-          property: connectionString
+        sync: false
       - key: ALLOWED_HOSTS
         value: ".onrender.com"
       - key: CORS_ALLOW_ALL_ORIGINS

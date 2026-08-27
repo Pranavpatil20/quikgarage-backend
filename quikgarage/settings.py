@@ -79,13 +79,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'quikgarage.wsgi.application'
 
-# Prefer DATABASE_URL (Render / Heroku) over discrete Postgres env vars.
+# Prefer DATABASE_URL (Neon / Render / Heroku) over discrete Postgres env vars.
+# Neon free tier sleeps when idle — conn_health_checks drops dead pooled sockets.
 DATABASE_URL = os.getenv('DATABASE_URL', '').strip()
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
             conn_max_age=600,
+            conn_health_checks=True,
             ssl_require=not DEBUG,
         ),
     }
