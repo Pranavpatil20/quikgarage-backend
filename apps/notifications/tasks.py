@@ -34,11 +34,27 @@ def send_push_notification(user_id: int, title: str, message: str, data: dict | 
         logger.warning('User %s not found for notification', user_id)
         return
 
+    payload = data or {}
+    dedupe_since = timezone.now() - timedelta(seconds=60)
+    recent = Notification.objects.filter(
+        user_id=user_id,
+        title=title,
+        message=message,
+        created_at__gte=dedupe_since,
+    )
+    booking_id = payload.get('booking_id')
+    status = payload.get('status')
+    if booking_id and status:
+        recent = recent.filter(data__booking_id=str(booking_id), data__status=status)
+    if recent.exists():
+        logger.info('Skipping duplicate notification for user %s: %s', user_id, title)
+        return
+
     Notification.objects.create(
         user=user,
         title=title,
         message=message,
-        data=data or {},
+        data=payload,
     )
 
     if user.fcm_token:
@@ -73,7 +89,7 @@ def notify_booking_created(booking_id: int):
     _enqueue(
         send_push_notification,
         booking.customer_id,
-        'Booking confirmed',
+        'Booking received',
         f'Your booking for {vehicle} at {garage} is scheduled on {date} at {slot}.',
         payload,
     )

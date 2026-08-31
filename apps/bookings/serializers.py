@@ -75,6 +75,10 @@ class OwnerBookingCreateSerializer(serializers.ModelSerializer):
             'garage', 'service_type', 'booking_date', 'time_slot', 'notes',
         )
 
+    def validate_customer_phone(self, value):
+        from apps.authentication.serializers import validate_indian_phone
+        return validate_indian_phone(value)
+
     def validate(self, attrs):
         from apps.users.models import User, UserRole
 
@@ -83,9 +87,7 @@ class OwnerBookingCreateSerializer(serializers.ModelSerializer):
         if garage.owner_id != request.user.id:
             raise serializers.ValidationError({'garage': 'Not your garage.'})
 
-        from apps.authentication.serializers import normalize_phone
-
-        phone = normalize_phone(attrs.pop('customer_phone'))
+        phone = attrs.pop('customer_phone')
         vehicle_number = attrs.pop('vehicle_number')
         make_model = attrs.pop('make_model', '')
         vehicle_type = (attrs.pop('vehicle_type', None) or 'bike').lower()
